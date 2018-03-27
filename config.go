@@ -203,6 +203,9 @@ type TaskConfig struct {
 	// Sudo indicates that the given command should be run with the given sudo credentials
 	Sudo bool `yaml:"sudo"`
 
+	// ExpectInput indicates that the given command should expect user input at run
+	ExpectInput bool `yaml:"expect-input"`
+
 	// Tags is a list of strings that is used to filter down which task are run at runtime
 	Tags   stringArray `yaml:"tags"`
 	TagSet mapset.Set

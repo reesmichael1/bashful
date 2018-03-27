@@ -264,9 +264,9 @@ func (task *Task) inflateCmd() {
 	sudoCmd := ""
 	if task.Config.Sudo {
 		sudoCmd = "sudo -S "
+		task.Command.Cmd.Stdin = strings.NewReader(string(sudoPassword) + "\n")
 	}
 	task.Command.Cmd = exec.Command(shell, "-c", sudoCmd+task.Config.CmdString+"; BASHFUL_RC=$?; env >&3; exit $BASHFUL_RC")
-	task.Command.Cmd.Stdin = strings.NewReader(string(sudoPassword) + "\n")
 
 	// allow the child process to provide env vars via a pipe (FD3)
 	task.Command.Cmd.ExtraFiles = []*os.File{writeFd}
@@ -522,6 +522,13 @@ func (task *Task) runSingleCmd(resultChan chan CmdEvent, waiter *sync.WaitGroup,
 
 	stdoutPipe, _ := task.Command.Cmd.StdoutPipe()
 	stderrPipe, _ := task.Command.Cmd.StderrPipe()
+	stdinPipe, err := task.Command.Cmd.StdinPipe()
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer stdinPipe.Close()
 
 	// copy env vars into proc
 	for k, v := range environment {
@@ -547,6 +554,9 @@ func (task *Task) runSingleCmd(resultChan chan CmdEvent, waiter *sync.WaitGroup,
 	go readPipe(stderrChan, stderrPipe)
 
 	for {
+		if task.Config.ExpectInput {
+			io.WriteString(stdinPipe, "hello world\n")
+		}
 		select {
 		case stdoutMsg, ok := <-stdoutChan:
 			if ok {
