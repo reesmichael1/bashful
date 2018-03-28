@@ -91,6 +91,9 @@ type Task struct {
 
 	// failedTasks is a list of tasks with a non-zero return value
 	failedTasks []*Task
+
+	// userInput holds the given user input, if any, for this task
+	userInput string
 }
 
 // TaskDisplay represents all non-config items that control how the task line should be printed to the screen
@@ -522,17 +525,17 @@ func (task *Task) runSingleCmd(resultChan chan CmdEvent, waiter *sync.WaitGroup,
 
 	stdoutPipe, _ := task.Command.Cmd.StdoutPipe()
 	stderrPipe, _ := task.Command.Cmd.StderrPipe()
-	stdinPipe, err := task.Command.Cmd.StdinPipe()
-
-	if err != nil {
-		panic(err)
-	}
-
+	stdinPipe, _ := task.Command.Cmd.StdinPipe()
 	defer stdinPipe.Close()
 
 	// copy env vars into proc
 	for k, v := range environment {
 		task.Command.Cmd.Env = append(task.Command.Cmd.Env, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	// Write the user input (if any) to stdin
+	if task.Config.ExpectInput {
+		io.WriteString(stdinPipe, fmt.Sprintf("%s\n", task.userInput))
 	}
 
 	task.Command.Cmd.Start()
@@ -554,9 +557,6 @@ func (task *Task) runSingleCmd(resultChan chan CmdEvent, waiter *sync.WaitGroup,
 	go readPipe(stderrChan, stderrPipe)
 
 	for {
-		if task.Config.ExpectInput {
-			io.WriteString(stdinPipe, "hello world\n")
-		}
 		select {
 		case stdoutMsg, ok := <-stdoutChan:
 			if ok {

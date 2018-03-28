@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -250,6 +251,41 @@ func storeSudoPasswd() {
 	}
 }
 
+func getUserInput(t *Task) string {
+	var prompt string
+	if t.Config.InputPrompt != "" {
+		prompt = t.Config.InputPrompt
+	} else {
+		prompt = fmt.Sprintf("Please enter input for task: %s", t.Config.Name)
+	}
+	fmt.Println(prompt)
+	reader := bufio.NewReader(os.Stdin)
+	text, _ := reader.ReadString('\n')
+	return text
+}
+
+func storeUserInputs() {
+	for _, task := range allTasks {
+		if task.Config.ExpectInput {
+			if task.Config.Input != "" {
+				task.userInput = task.Config.Input
+			} else {
+				task.userInput = getUserInput(task)
+			}
+		}
+
+		for _, child := range task.Children {
+			if child.Config.ExpectInput {
+				if child.Config.Input != "" {
+					child.userInput = child.Config.Input
+				} else {
+					child.userInput = getUserInput(task)
+				}
+			}
+		}
+	}
+}
+
 func run(yamlString []byte, environment map[string]string) []*Task {
 	var err error
 
@@ -259,6 +295,7 @@ func run(yamlString []byte, environment map[string]string) []*Task {
 	ParseConfig(yamlString)
 	allTasks = CreateTasks()
 	storeSudoPasswd()
+	storeUserInputs()
 
 	DownloadAssets(allTasks)
 

@@ -206,6 +206,12 @@ type TaskConfig struct {
 	// ExpectInput indicates that the given command should expect user input at run
 	ExpectInput bool `yaml:"expect-input"`
 
+	// Input holds the string to optionally provide for the expected input if ExpectInput is given
+	Input string `yaml:"input"`
+
+	// InputPrompt provides the optional prompt for input for a task that requires user input
+	InputPrompt string `yaml:"input-prompt"`
+
 	// Tags is a list of strings that is used to filter down which task are run at runtime
 	Tags   stringArray `yaml:"tags"`
 	TagSet mapset.Set
